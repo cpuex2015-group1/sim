@@ -14,6 +14,8 @@ int stepflag=0;
 int recv8flag=0;
 int send8flag=0;
 int noprintflag=0;
+int binflag=0;
+int hexflag=0;
 int breakpoint[BRAM_NUM]={};
 int gdisp[GPR_NUM]={};
 int fdisp[FPR_NUM]={};
@@ -117,6 +119,7 @@ void command_input()
   int regnum;
   uint32_t addr;
   int times;
+  int i;
 
   while (1) {
     printf(">");
@@ -139,8 +142,7 @@ void command_input()
 	addr=atoi(tok);
 	if (addr>=0 && addr<BRAM_NUM) {
 	  breakpoint[addr]=1;
-	  printf("set breakpoint : ");
-	  printbin(addr);
+	  printf("set breakpoint : %d\n",addr);
 	} else {
 	  puts("Invalid memory address.");
 	}
@@ -159,8 +161,7 @@ void command_input()
 	    times=atoi(tok);
 	    if (times>0) {
 	      breakpoint[addr]=times+1;
-	      printf("set breakpoint : ");
-	      printbin(addr);
+	      printf("set breakpoint : %d\n",addr);
 	      printf("n = %d\n",times);
 	    } else {
 	      puts("n must be positive number.");
@@ -226,6 +227,14 @@ void command_input()
       print_statistics();
     } else if (strcmp(tok,"pp")==0) {
       printf("pc : %d\n",pc);
+    } else if (strcmp(tok,"pb")==0) {
+      for (i=0;i<BRAM_NUM;i++) {
+	if (breakpoint[i]==1) {
+	  printf("breakpoint : %d\n",i);
+	} else if (breakpoint[i]>1) {
+	  printf("breakpoint ignore : %d (n = %d)\n",i,breakpoint[i]-1);
+	}
+      }
     } else if (strcmp(tok,"dg")==0) {
       tok=strtok(NULL," \n");
       if (tok==NULL) {
@@ -265,6 +274,7 @@ void command_input()
       puts("pm [addr] : print memory [addr]");
       puts("ps : print statistics");
       puts("pp : print PC");
+      puts("pb : print breakpoints");
       puts("dg [n] : display GPR [n]");
       puts("df [n] : display FPR [n]");
     } else {
@@ -280,7 +290,14 @@ void display_reg()
 
   for (i=0;i<GPR_NUM;i++) {
     if (gdisp[i]) {
-      printf("GPR %2d : %d\n",i,gpr[i]);
+      if (binflag) {
+	printf("GPR %2d : ",i);
+	printbin(gpr[i]);
+      } else if (hexflag) {
+	printf("GPR %2d : %08x\n",i,gpr[i]);
+      } else {
+	printf("GPR %2d : %d\n",i,gpr[i]);
+      }
     }
   }
 
@@ -324,7 +341,14 @@ void print_reg()
   puts("===Register===");
 
   for (i=0;i<GPR_NUM;i++) {
-    printf("GPR %2d : %d\n",i,gpr[i]);
+    if (binflag) {
+      printf("GPR %2d : ",i);
+      printbin(gpr[i]);
+    } else if (hexflag) {
+      printf("GPR %2d : %08x\n",i,gpr[i]);
+    } else {
+      printf("GPR %2d : %d\n",i,gpr[i]);
+    }
   }
 
   for (i=0;i<FPR_NUM;i++) {
@@ -386,7 +410,7 @@ int main(int argc,char* argv[])
     return 1;
   }
 
-  while ((option=getopt(argc,argv,"hsi:o:r"))!=-1) {
+  while ((option=getopt(argc,argv,"hsi:o:rbx"))!=-1) {
     switch (option) {
     case 'h':
       printf("usage: %s [options] filename\n",argv[0]);
@@ -396,6 +420,8 @@ int main(int argc,char* argv[])
       printf("-i [filename] : input recv8 from binary file\n");
       printf("-o [filename] : output send8 in binary file\n");
       printf("-r : output result only\n");
+      printf("-b : print GPR in binary");
+      printf("-x : print GPR in hex");
       return 0;
     case 's':
       stepflag=1;
@@ -418,6 +444,12 @@ int main(int argc,char* argv[])
       break;
     case 'r':
       noprintflag=1;
+      break;
+    case 'b':
+      binflag=1;
+      break;
+    case 'x':
+      hexflag=1;
       break;
     default:
       printf("Unknown option\n");

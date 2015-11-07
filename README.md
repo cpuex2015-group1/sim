@@ -11,6 +11,8 @@ make
 -i [filename] : recv8のデータを[filename]（バイナリファイル）から読み込み  
 -o [filename] : send8のデータを[filename]（バイナリファイル）に出力  
 -r : 結果のみを表示  
+-b : GPRを2進数で表示  
+-x : GPRを16進数で表示  
 
 step実行時コマンド　（入力時[]はつけない）  
 h , help : help  
@@ -24,5 +26,6 @@ pf [n] : print FPR [n]
 pm [addr] : print memory [addr]  
 ps : print statistics  
 pp : print PC  
+pb : print breakpoints  
 dg [n] : display GPR [n]  
 df [n] : display FPR [n]  
