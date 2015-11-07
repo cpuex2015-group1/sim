@@ -34,7 +34,7 @@ void print8(uint32_t i)
   printf("\n");
 }
 
-void decode(uint32_t inst,uint32_t *opcode,uint32_t *r1,uint32_t *r2,uint32_t *r3,uint32_t *shamt,uint32_t *funct,int16_t *imm,uint32_t *addr)
+void decode(uint32_t inst,uint32_t *opcode,uint32_t *r1,uint32_t *r2,uint32_t *r3,uint32_t *shamt,uint32_t *funct,int16_t *imm,uint16_t *uimm,uint32_t *addr)
 {
   *opcode=inst>>26;
   *r1=(inst>>21)&0x1f;
@@ -43,6 +43,7 @@ void decode(uint32_t inst,uint32_t *opcode,uint32_t *r1,uint32_t *r2,uint32_t *r
   *shamt=(inst>>6)&0x1f;
   *funct=inst&0x3f;
   *imm=inst&0xffff;
+  *uimm=inst&0xffff;
   *addr=inst&0x3ffffff;
 }
 
@@ -50,11 +51,12 @@ void exec_inst(uint32_t inst)
 {
   uint32_t opcode,r1,r2,r3,shamt,funct,addr;
   int16_t imm;
+  uint16_t uimm;
 
   uint32_t recvdata;
   uint8_t senddata;
 
-  decode(inst,&opcode,&r1,&r2,&r3,&shamt,&funct,&imm,&addr);
+  decode(inst,&opcode,&r1,&r2,&r3,&shamt,&funct,&imm,&uimm,&addr);
 
   if (!noprintflag) {
     printinst(inst);
@@ -123,17 +125,17 @@ void exec_inst(uint32_t inst)
     bneq_count++;
     break;
   case OP_ST:
-    sram[gpr[r1]]=gpr[r2];
+    sram[gpr[r1]+imm]=gpr[r2];
     if (!noprintflag) {
-      printf("st : mem[r%d] <- r%d\n",r1,r2);
+      printf("st : mem[r%d + %d] <- r%d\n",r1,imm,r2);
     }
     pc++;
     st_count++;
     break;
   case OP_LD:
-    gpr[r2]=sram[gpr[r1]];
+    gpr[r2]=sram[gpr[r1]+imm];
     if (!noprintflag) {
-      printf("st : r%d <- mem[r%d]\n",r2,r1);
+      printf("st : r%d <- mem[r%d + %d]\n",r2,r1,imm);
     }
     pc++;
     ld_count++;
@@ -294,28 +296,30 @@ void exec_inst(uint32_t inst)
     send8_count++;
     break;
   case OP_RECV8:
-    printf("recv8(hexで入力)>");
-    scanf("%x",&recvdata);
-    print8(recvdata);
+    if (recv8flag && fread(&recvdata,1,1,fprecv8)==0) {
+      printf("recv8(hexで入力)>");
+      scanf("%x",&recvdata);
+    }
     gpr[r1]=(gpr[r1]&0xffffff00)|recvdata;
     if (!noprintflag) {
-      printf("recv8 : r%d\n",r1);
+      printf("recv8 : r%d <- ",r1);
+      print8(recvdata);
     }
     pc++;
     recv8_count++;
     break;
   case OP_FST:
-    sram[gpr[r1]]=fpr[r2].i;
+    sram[gpr[r1]+imm]=fpr[r2].i;
     if (!noprintflag) {
-      printf("fst : mem[r%d] <- f%d\n",r1,r2);
+      printf("fst : mem[r%d + %d] <- f%d\n",r1,imm,r2);
     }
     pc++;
     fst_count++;
     break;
   case OP_FLD:
-    fpr[r2].i=sram[gpr[r1]];
+    fpr[r2].i=sram[gpr[r1]+imm];
     if (!noprintflag) {
-      printf("fld : f%d <- mem[r%d]\n",r2,r1);
+      printf("fld : f%d <- mem[r%d + %d]\n",r2,r1,imm);
     }
     pc++;
     fld_count++;
@@ -327,6 +331,14 @@ void exec_inst(uint32_t inst)
     }
     pc++;
     fmov_count++;
+    break;
+  case OP_ADDIU:
+    gpr[r1]=gpr[r2]+uimm;
+    if (!noprintflag) {
+      printf("addiu : r%d <- r%d + %d\n",r1,r2,uimm);
+    }
+    pc++;
+    addiu_count++;
     break;
   default:
     printf("Unknown instruction\n");

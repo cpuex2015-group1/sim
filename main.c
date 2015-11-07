@@ -7,12 +7,16 @@
 
 #define MAXBUF 1024
 
+FILE* fprecv8;
 FILE* fpsend8;
 
 int stepflag=0;
+int recv8flag=0;
 int send8flag=0;
 int noprintflag=0;
 int breakpoint[BRAM_NUM]={};
+int gdisp[GPR_NUM]={};
+int fdisp[FPR_NUM]={};
 
 int datasize,textsize;
 
@@ -46,6 +50,7 @@ long long int fst_count=0;
 long long int fld_count=0;
 long long int bneq_count=0;
 long long int fmov_count=0;
+long long int addiu_count=0;
 
 void print_statistics()
 {
@@ -80,6 +85,7 @@ void print_statistics()
   printf("fld   : %lld\n",fld_count);
   printf("bneq  : %lld\n",bneq_count);
   printf("fmov  : %lld\n",fmov_count);
+  printf("addiu : %lld\n",addiu_count);
 }
 
 void printbin(uint32_t i)
@@ -197,7 +203,7 @@ void command_input()
       } else {
 	regnum=atoi(tok);
 	if (regnum>=0 && regnum<FPR_NUM) {
-	  printf("FPR %d : ",regnum);
+	  printf("FPR %d : \n",regnum);
 	  printfloat(fpr[regnum].i);
 	} else {
 	  puts("Invalid register number.");
@@ -218,19 +224,71 @@ void command_input()
       }
     } else if (strcmp(tok,"ps")==0) {
       print_statistics();
+    } else if (strcmp(tok,"pp")==0) {
+      printf("pc : %d\n",pc);
+    } else if (strcmp(tok,"dg")==0) {
+      tok=strtok(NULL," \n");
+      if (tok==NULL) {
+	puts("Please enter the register number.");
+      } else {
+	regnum=atoi(tok);
+	if (regnum>=0 && regnum<GPR_NUM) {
+	  gdisp[regnum]=1;
+	  printf("display : GPR %d\n",regnum);
+	} else {
+	  puts("Invalid register number.");
+	}
+      }
+    } else if (strcmp(tok,"df")==0) {
+      tok=strtok(NULL," \n");
+      if (tok==NULL) {
+	puts("Please enter the register number.");
+      } else {
+	regnum=atoi(tok);
+	if (regnum>=0 && regnum<FPR_NUM) {
+	  gdisp[regnum]=1;
+	  printf("display : FPR %d\n",regnum);
+	} else {
+	  puts("Invalid register number.");
+	}
+      }
     } else if (strcmp(tok,"h")==0 || strcmp(tok,"help")==0) {
       puts("commands");
       puts("h : help");
       puts("r : run");
       puts("s : step");
       puts("b [addr] : set breakpoint [addr]");
+      puts("bi [addr] [n] : breakpoint ignore");
       puts("db [addr] : delete breakpoint [addr]");
       puts("pg [n] : print GPR [n]");
       puts("pf [n] : print FPR [n]");
       puts("pm [addr] : print memory [addr]");
       puts("ps : print statistics");
+      puts("pp : print PC");
+      puts("dg [n] : display GPR [n]");
+      puts("df [n] : display FPR [n]");
     } else {
       puts("Unknown command.");
+    }
+  }
+}
+
+
+void display_reg()
+{
+  int i;
+
+  for (i=0;i<GPR_NUM;i++) {
+    if (gdisp[i]) {
+      printf("GPR %2d : %d\n",i,gpr[i]);
+    }
+  }
+
+  for (i=0;i<FPR_NUM;i++) {
+    if (fdisp[i]) {
+      printf("FPR %2d : ",i);
+      printfloat(fpr[i].i);
+      printf(" , %lf\n",fpr[i].f);
     }
   }
 }
@@ -254,6 +312,8 @@ void run()
     }
 
     exec_inst(bram[pc]);
+
+    display_reg();
   }
 }
 
@@ -326,18 +386,27 @@ int main(int argc,char* argv[])
     return 1;
   }
 
-  while ((option=getopt(argc,argv,"hso:r"))!=-1) {
+  while ((option=getopt(argc,argv,"hsi:o:r"))!=-1) {
     switch (option) {
     case 'h':
       printf("usage: %s [options] filename\n",argv[0]);
       printf("options\n");
       printf("-h : help\n");
       printf("-s : step exec\n");
+      printf("-i [filename] : input recv8 from binary file\n");
       printf("-o [filename] : output send8 in binary file\n");
       printf("-r : output result only\n");
       return 0;
     case 's':
       stepflag=1;
+      break;
+    case 'i':
+      recv8flag=1;
+      fprecv8=fopen(optarg,"rb");
+      if (fprecv8==NULL) {
+	printf("can't open file : %s\n",optarg);
+	return 1;
+      }
       break;
     case 'o':
       send8flag=1;
