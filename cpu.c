@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdint.h>
+#include<math.h>
 #include"cpu.h"
 
 uint32_t pc=0;
@@ -135,7 +136,7 @@ void exec_inst(uint32_t inst)
   case OP_LD:
     gpr[r2]=sram[gpr[r1]+imm];
     if (!noprintflag) {
-      printf("st : r%d <- mem[r%d + %d]\n",r2,r1,imm);
+      printf("ld : r%d <- mem[r%d + %d]\n",r2,r1,imm);
     }
     pc++;
     ld_count++;
@@ -184,7 +185,7 @@ void exec_inst(uint32_t inst)
   case OP_FADD:
     fpr[r1].f=fpr[r2].f+fpr[r3].f;
     if (!noprintflag) {
-      printf("fadd : r%d <- r%d + r%d\n",r1,r2,r3);
+      printf("fadd : f%d <- f%d + f%d\n",r1,r2,r3);
     }
     pc++;
     fadd_count++;
@@ -192,7 +193,7 @@ void exec_inst(uint32_t inst)
   case OP_FMUL:
     fpr[r1].f=fpr[r2].f*fpr[r3].f;
     if (!noprintflag) {
-      printf("fmul : r%d <- r%d * r%d\n",r1,r2,r3);
+      printf("fmul : f%d <- f%d * f%d\n",r1,r2,r3);
     }
     pc++;
     fmul_count++;
@@ -200,7 +201,7 @@ void exec_inst(uint32_t inst)
   case OP_FINV:
     fpr[r1].f=1.0/fpr[r2].f;
     if (!noprintflag) {
-      printf("finv : r%d <- 1/r%d\n",r1,r2);
+      printf("finv : f%d <- 1 / f%d\n",r1,r2);
     }
     pc++;
     finv_count++;
@@ -212,7 +213,7 @@ void exec_inst(uint32_t inst)
       fpr[r1].f=fpr[r2].f;
     }
     if (!noprintflag) {
-      printf("fabs : r%d <- abs(r%d)\n",r1,r2);
+      printf("fabs : f%d <- abs(f%d)\n",r1,r2);
     }
     pc++;
     fabs_count++;
@@ -220,7 +221,7 @@ void exec_inst(uint32_t inst)
   case OP_FNEG:
     fpr[r1].f=-fpr[r2].f;
     if (!noprintflag) {
-      printf("fneg : r%d <- -r%d\n",r1,r2);
+      printf("fneg : f%d <- -f%d\n",r1,r2);
     }
     pc++;
     fneg_count++;
@@ -238,7 +239,7 @@ void exec_inst(uint32_t inst)
     slt_count++;
     break;
   case OP_FSEQ:
-    if (fpr[r1].i==fpr[r2].i) {
+    if (fpr[r1].f==fpr[r2].f) {
       fpcond=1;
     } else {
       fpcond=0;
@@ -250,7 +251,7 @@ void exec_inst(uint32_t inst)
     fseq_count++;
     break;
   case OP_FSLT:
-    if (fpr[r1].i<fpr[r2].i) {
+    if (fpr[r1].f<fpr[r2].f) {
       fpcond=1;
     } else {
       fpcond=0;
@@ -339,6 +340,14 @@ void exec_inst(uint32_t inst)
     }
     pc++;
     addiu_count++;
+    break;
+  case OP_FSQRT:
+    fpr[r1].f=sqrt(fpr[r2].f);
+    if (!noprintflag) {
+      printf("fsqrt : f%d <- sqrt(f%d)\n",r1,r2);
+    }
+    pc++;
+    fsqrt_count++;
     break;
   default:
     printf("Unknown instruction\n");

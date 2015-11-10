@@ -53,6 +53,54 @@ long long int fld_count=0;
 long long int bneq_count=0;
 long long int fmov_count=0;
 long long int addiu_count=0;
+long long int fsqrt_count=0;
+
+
+void printbin(uint32_t i)
+{
+  int k;
+
+  for (k=31;k>=0;k--) {
+    printf("%d",(i>>k)&1);
+  }
+  printf("\n");
+}
+
+void printfloat(uint32_t i)
+{
+  int k;
+
+  for (k=31;k>=0;k--) {
+    printf("%d",(i>>k)&1);
+    if (k==31 || k==23) {
+      printf(" ");
+    }
+  }
+}
+
+void print_reg()
+{
+  int i;
+
+  puts("===Register===");
+
+  for (i=0;i<GPR_NUM;i++) {
+    if (binflag) {
+      printf("GPR %2d : ",i);
+      printbin(gpr[i]);
+    } else if (hexflag) {
+      printf("GPR %2d : %08x\n",i,gpr[i]);
+    } else {
+      printf("GPR %2d : %d\n",i,gpr[i]);
+    }
+  }
+
+  for (i=0;i<FPR_NUM;i++) {
+    printf("FPR %2d : ",i);
+    printfloat(fpr[i].i);
+    printf(" , %lf\n",fpr[i].f);
+  }
+}
 
 void print_statistics()
 {
@@ -88,28 +136,7 @@ void print_statistics()
   printf("bneq  : %lld\n",bneq_count);
   printf("fmov  : %lld\n",fmov_count);
   printf("addiu : %lld\n",addiu_count);
-}
-
-void printbin(uint32_t i)
-{
-  int k;
-
-  for (k=31;k>=0;k--) {
-    printf("%d",(i>>k)&1);
-  }
-  printf("\n");
-}
-
-void printfloat(uint32_t i)
-{
-  int k;
-
-  for (k=31;k>=0;k--) {
-    printf("%d",(i>>k)&1);
-    if (k==31 || k==23) {
-      printf(" ");
-    }
-  }
+  printf("fsqrt : %lld\n",fsqrt_count);
 }
 
 void command_input()
@@ -236,6 +263,8 @@ void command_input()
 	  printf("breakpoint ignore : %d (n = %d)\n",i,breakpoint[i]-1);
 	}
       }
+    } else if (strcmp(tok,"pc")==0) {
+      printf("FPcond : %d\n",fpcond);
     } else if (strcmp(tok,"dg")==0) {
       tok=strtok(NULL," \n");
       if (tok==NULL) {
@@ -262,6 +291,8 @@ void command_input()
 	  puts("Invalid register number.");
 	}
       }
+    } else if (strcmp(tok,"pa")==0) {
+      print_reg();
     } else if (strcmp(tok,"h")==0 || strcmp(tok,"help")==0) {
       puts("commands");
       puts("h : help");
@@ -273,9 +304,11 @@ void command_input()
       puts("pg [n] : print GPR [n]");
       puts("pf [n] : print FPR [n]");
       puts("pm [addr] : print memory [addr]");
+      puts("pa : print all registers");
       puts("ps : print statistics");
       puts("pp : print PC");
       puts("pb : print breakpoints");
+      puts("pc : print FPcond");
       puts("dg [n] : display GPR [n]");
       puts("df [n] : display FPR [n]");
     } else {
@@ -332,30 +365,6 @@ void run()
     exec_inst(bram[pc]);
 
     display_reg();
-  }
-}
-
-void print_reg()
-{
-  int i;
-
-  puts("===Register===");
-
-  for (i=0;i<GPR_NUM;i++) {
-    if (binflag) {
-      printf("GPR %2d : ",i);
-      printbin(gpr[i]);
-    } else if (hexflag) {
-      printf("GPR %2d : %08x\n",i,gpr[i]);
-    } else {
-      printf("GPR %2d : %d\n",i,gpr[i]);
-    }
-  }
-
-  for (i=0;i<FPR_NUM;i++) {
-    printf("FPR %2d : ",i);
-    printfloat(fpr[i].i);
-    printf(" , %lf\n",fpr[i].f);
   }
 }
 
@@ -478,6 +487,9 @@ int main(int argc,char* argv[])
   printf("\n");
   print_statistics();
 
+  if (recv8flag) {
+    fclose(fprecv8);
+  }
   if (send8flag) {
     fclose(fpsend8);
   }
