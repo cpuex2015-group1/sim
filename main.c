@@ -16,6 +16,7 @@ int send8flag=0;
 int noprintflag=0;
 int binflag=0;
 int hexflag=0;
+int x86flag=0;
 int breakpoint[BRAM_NUM]={};
 int gdisp[GPR_NUM]={};
 int fdisp[FPR_NUM]={};
@@ -492,6 +493,11 @@ int readtable()
     fsqrt_table2[i]=read_nbit(fsqrt_fp2,13);
   }
 
+  fclose(finv_fp1);
+  fclose(finv_fp2);
+  fclose(fsqrt_fp1);
+  fclose(fsqrt_fp2);
+
   return 0;
 }
 
@@ -505,7 +511,7 @@ int main(int argc,char* argv[])
     return 1;
   }
 
-  while ((option=getopt(argc,argv,"hsi:o:rbx"))!=-1) {
+  while ((option=getopt(argc,argv,"hsi:o:rbxf"))!=-1) {
     switch (option) {
     case 'h':
       printf("usage: %s [options] filename\n",argv[0]);
@@ -517,6 +523,7 @@ int main(int argc,char* argv[])
       printf("-r : output result only\n");
       printf("-b : print GPR in binary\n");
       printf("-x : print GPR in hex\n");
+      printf("-f : use x86 FPU\n");
       return 0;
     case 's':
       stepflag=1;
@@ -545,6 +552,9 @@ int main(int argc,char* argv[])
       break;
     case 'x':
       hexflag=1;
+      break;
+    case 'f':
+      x86flag=1;
       break;
     default:
       printf("Unknown option\n");
